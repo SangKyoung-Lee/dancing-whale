@@ -364,6 +364,24 @@ button.chip{cursor:pointer}
 .tagbtn.quiz{width:100%;text-align:left;border-radius:var(--r-lg);padding:14px 16px;font-size:16px}
 .tagbtn:disabled{opacity:.4}
 .tab{font-size:9.5px}
+/* 미션 (출석·칭찬 과제 달성) */
+.subtabs.s3{grid-template-columns:repeat(3,1fr)}
+.att{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.att .st{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 0 8px;border-radius:var(--r-md);background:var(--surface-2);font-size:11px;color:var(--muted)}
+.att .st b{font-size:13px;font-weight:600;color:var(--ink)}
+.att .st.on{background:var(--sea-soft);color:var(--sea)}
+.att .st.on b{color:var(--sea)}
+.att .st.next{box-shadow:inset 0 0 0 2px var(--sea-focus)}
+.att .st.big .pearl-dot{width:14px;height:14px}
+.msn{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+.msn:last-child{border-bottom:0}
+.msn .body{display:flex;flex-direction:column;gap:6px;min-width:0}
+.msn .body b{font-size:16px;font-weight:600;line-height:1.3}
+.msn .mbar{height:4px;background:var(--surface-2);border-radius:var(--pill);overflow:hidden}
+.msn .mbar i{display:block;height:100%;background:var(--sea);border-radius:var(--pill)}
+.msn.got .body b{color:var(--muted)}
+.msn .btn.small{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.sendas{display:flex;flex-direction:column;gap:8px}
 </style>
 </head>
 <body>
@@ -417,6 +435,21 @@ button.chip{cursor:pointer}
   }
   function acPick(i){var m=acRes[i];if(!m)return;S.picked={n:m[0],t:m[1]};acIdx=-1;render();var b=$("#send");if(b)b.focus()}
   var RELS=["선배","후배","동기","협업자"];
+  // 실명 칭찬 때 상대에게 보이는 내 이름 (예시 인물)
+  var ME={n:"한도윤",t:"쿠폰사업팀"};
+  // ── 미션: 출석·칭찬하기·칭찬 받기 과제를 달성하면 진주를 받음 (칭찬 1회당 즉시 적립 대신) ──
+  var ATT=[5,5,10,5,5,10,30]; // 연속 출석 1~7일 차 보상, 7일마다 다시 시작
+  var DAILY=[
+    {id:"d-send",n:"동료 칭찬 3번 하기",k:"sent",goal:3,r:15,go:"vote"},
+    {id:"d-recv",n:"칭찬 1번 받기",k:"recv",goal:1,r:10,go:"inbox"},
+    {id:"d-reply",n:"받은 칭찬에 감사 답장하기",k:"reply",goal:1,r:10,go:"inbox"},
+    {id:"d-cheer",n:"친구 방 구경하고 파도 응원하기",k:"cheer",goal:1,r:5,go:"friends"}];
+  var DAILY_ALL=20; // 오늘의 미션 보상을 모두 받으면 보너스
+  var WEEKLY=[
+    {id:"w-att",n:"이번 주 5일 출석하기",k:"att",goal:5,r:30},
+    {id:"w-send",n:"동료 칭찬 10번 하기",k:"sent",goal:10,r:40,go:"vote"},
+    {id:"w-people",n:"서로 다른 동료 5명 칭찬하기",k:"people",goal:5,r:30,go:"vote"},
+    {id:"w-recv",n:"칭찬 5번 받기",k:"recv",goal:5,r:30,go:"inbox"}];
   // 받은 칭찬은 질문이 아니라 '나에게 하는 칭찬'으로 보여줌
   var PRAISES=["회의에서 막힌 문제를 깔끔하게 정리해 줘요","바쁜 와중에도 질문하면 끝까지 알려줘요","점심을 같이 먹으면 기분이 좋아져요","보고서를 읽기 쉽게 만드는 데 일가견이 있어요","새로 온 사람을 제일 먼저 챙겨줘요","급한 일이 터져도 가장 침착해요","작은 아이디어도 크게 키워줘요","우리 팀 분위기 메이커예요"];
   function praiseText(q){var k=QUESTIONS.indexOf(q);return k>=0?PRAISES[k]:String(q).replace(/\?$/,"")}
@@ -460,17 +493,44 @@ button.chip{cursor:pointer}
   var S={tab:"whale",pearls:140,qIdx:0,todayVotes:2,dailyMax:10,picked:null,coffee:false,
     received:[
       {q:"회의에서 막힌 문제를 깔끔하게 정리해주는 사람은?",hint:null,rel:"협업자",when:"오늘",coupon:false,isNew:true},
+      {q:"바쁜 와중에도 질문하면 끝까지 알려주는 동료는?",hint:null,rel:null,when:"오늘",coupon:false,isNew:true,named:true,from:"조은비",fromTeam:"상품개발팀"},
       {q:"보고서를 읽기 쉽게 만드는 데 일가견이 있는 사람은?",hint:"선배",rel:"선배",when:"어제",coupon:true,isNew:false},
       {q:"새로 온 사람을 제일 먼저 챙겨주는 동료는?",hint:null,rel:"동기",when:"3일 전",coupon:false,isNew:false}
     ],
     receivedTotal:17,week:[2,1,3,0,2,4,1],owned:{},equipped:{hat:false,goggles:false,crown:false,board:false},bg:"tropic",
     friendMode:"in",showCompany:false,shareFmt:"story",qrTags:{},qrCoffee:false,qrSent:0,cheered:{},whaleMode:"whale",room:{weed:true},roomOwned:{weed:true},
     adDay:"",adDone:{},adToday:0,monthReceived:12,claimed:{5:false},rMode:"claim",benepiaPts:0,coupons:[],pcWeekKey:"",pcWeek:0,pcTaken:{},
-    whaleName:"부캉이",rel:null,pMode:"coupon",rep:{kw:true,trend:true,quote:true,company:false},repDays:30,repLinks:[{id:"k3f9",to:"직접 공유 링크",days:30,left:21,views:2,items:"강점 키워드·칭찬 추이"}],
+    whaleName:"부캉이",rel:null,named:false,pMode:"coupon",rep:{kw:true,trend:true,quote:true,company:false},repDays:30,repLinks:[{id:"k3f9",to:"직접 공유 링크",days:30,left:21,views:2,items:"강점 키워드·칭찬 추이"}],
     repReqs:[{id:"r1",co:"바다테크 인사팀",purpose:"경력 채용 평판 조회",items:"강점 키워드·대표 칭찬",when:"오늘"}]};
   try{var saved=JSON.parse(localStorage.getItem("whale-proto")||"null");if(saved&&saved.v===1){Object.assign(S,saved.s)}}catch(e){}
   function persist(){try{localStorage.setItem("whale-proto",JSON.stringify({v:1,s:S}))}catch(e){}}
 
+  function ymd(d){return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()}
+  function today(){return ymd(new Date())}
+  function yesterday(){var d=new Date();d.setDate(d.getDate()-1);return ymd(d)}
+  function msReset(){var t=today(),wk=weekKey(),first=!S.ms;
+    if(first)S.ms={day:"",week:""};
+    if(S.ms.day!==t){S.ms.day=t;S.ms.d=first?{sent:2,recv:1,reply:0,cheer:0}:{sent:0,recv:0,reply:0,cheer:0};S.ms.dGot={}}
+    if(S.ms.week!==wk){S.ms.week=wk;S.ms.w=first?{att:3,sent:6,recv:4}:{att:0,sent:0,recv:0};S.ms.wPeople=first?["김하늘","정유나","오세린"]:[];S.ms.wGot={}}
+    if(!S.att)S.att={streak:3,last:yesterday()};
+    if(S.att.last!==t&&S.att.last!==yesterday())S.att.streak=0;}
+  function msW(k){return k==="people"?S.ms.wPeople.length:(S.ms.w[k]||0)}
+  function msVal(m){return m.id.charAt(0)==="d"?(S.ms.d[m.k]||0):msW(m.k)}
+  function msDone(){return DAILY.concat(WEEKLY).filter(function(m){return msVal(m)>=m.goal}).map(function(m){return m.id})}
+  // 행동이 생기면 미션 진행도를 올리고, 새로 달성한 미션을 알림 문구로 돌려줌
+  function msBump(k,name){msReset();var before=msDone();S.ms.d[k]=(S.ms.d[k]||0)+1;if(k in S.ms.w)S.ms.w[k]++;
+    if(name&&S.ms.wPeople.indexOf(name)<0)S.ms.wPeople.push(name);
+    var hit=DAILY.concat(WEEKLY).filter(function(m){return before.indexOf(m.id)<0&&msVal(m)>=m.goal});
+    return hit.length?" · 미션 달성: "+hit.map(function(m){return m.n}).join(", "):""}
+  function attPos(){var checked=S.att.last===today();return checked?((S.att.streak-1)%7)+1:S.att.streak%7}
+  function checkIn(){msReset();if(S.att.last===today())return;var pos=S.att.streak%7,r=ATT[pos];
+    var before=msDone();S.att.streak+=1;S.att.last=today();S.ms.w.att+=1;S.pearls+=r;
+    var hit=WEEKLY.filter(function(m){return before.indexOf(m.id)<0&&msVal(m)>=m.goal});
+    render();toast("출석 "+S.att.streak+"일째 · 진주 +"+r+(hit.length?" · 미션 달성: "+hit[0].n:""))}
+  function msClaimable(){msReset();var n=S.att.last===today()?0:1;
+    DAILY.forEach(function(m){if(!S.ms.dGot[m.id]&&msVal(m)>=m.goal)n++});
+    if(!S.ms.dGot.all&&DAILY.every(function(m){return S.ms.dGot[m.id]}))n++;
+    WEEKLY.forEach(function(m){if(!S.ms.wGot[m.id]&&msVal(m)>=m.goal)n++});return n}
   function level(){var l=0;LEVELS.forEach(function(x,i){if(S.receivedTotal>=x.min)l=i});return l}
   function condition(){var sum=S.week.reduce(function(a,b){return a+b},0);return sum>=14?{n:"최고",d:"0.75"}:sum>=8?{n:"좋음",d:"1"}:{n:"보통",d:"1.3"}}
   var $=function(s,r){return (r||document).querySelector(s)};
@@ -586,19 +646,21 @@ button.chip{cursor:pointer}
      +'<div class="progress"><i style="width:'+(S.todayVotes/S.dailyMax*100)+'%"></i></div>'
      +'<h2 class="question" id="qh">'+esc(q)+'</h2>'
      +(S.picked?'<div class="picked-chip">'+avatar(S.picked.n)+'<span class="nm"><b>'+esc(S.picked.n)+'</b><span>'+esc(S.picked.t)+' · SK엠앤서비스</span></span><button class="x" id="acClear" aria-label="다시 고르기">×</button></div>'
-      +'<div class="rel" role="radiogroup" aria-labelledby="relh"><div class="rel-h" id="relh">나는 너의 <b>'+(S.rel?esc(S.rel):'○○')+'</b>야</div>'
+      +'<div class="sendas"><span class="eyebrow">보내는 방식</span><div class="seg" role="group" aria-label="보내는 방식"><button data-named="0" aria-pressed="'+(!S.named)+'">익명으로</button><button data-named="1" aria-pressed="'+(!!S.named)+'">실명으로</button></div>'
+      +'<span class="note" style="margin:0">'+(S.named?'받는 사람에게 <b>'+esc(ME.n)+' · '+esc(ME.t)+'</b>이(가) 보낸 칭찬으로 전달돼요. 이름이 보이니 관계는 고르지 않아요.':'누가 보냈는지 보이지 않아요. 기본은 익명이에요.')+'</span></div>'
+      +(S.named?'':'<div class="rel" role="radiogroup" aria-labelledby="relh"><div class="rel-h" id="relh">나는 너의 <b>'+(S.rel?esc(S.rel):'○○')+'</b>야</div>'
       +'<div class="rel-opts">'+RELS.map(function(r){return '<button role="radio" aria-checked="'+(S.rel===r)+'" data-rel="'+r+'">'+r+'</button>'}).join("")+'</div>'
-      +'<span class="note" style="margin:0">받는 사람이 감사 답장을 보내면 이 관계가 힌트로 열려요. 이름은 보이지 않아요.</span></div>'
+      +'<span class="note" style="margin:0">받는 사람이 감사 답장을 보내면 이 관계가 힌트로 열려요. 이름은 보이지 않아요.</span></div>')
       :'<div class="ac"><label class="muted" for="acInput">칭찬할 동료 이름을 입력하세요</label><div class="ac-box"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="m16.5 16.5 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
        +'<input id="acInput" type="text" role="combobox" aria-autocomplete="list" aria-controls="acList" aria-expanded="false" autocomplete="off" placeholder="이름 또는 초성 (예: 김하늘, ㄱㅎ)"></div>'
        +'<ul class="ac-list" id="acList" role="listbox" aria-label="SK엠앤서비스 동료"></ul>'
        +'<span class="note" style="margin:0">SK엠앤서비스 이메일로 가입한 동료 <span class="num">'+MEMBERS.length+'</span>명 중에서 찾아요.</span></div>')
      +'<div class="toggle"><input type="checkbox" id="coffee"'+(S.coffee?' checked':'')+'><label for="coffee">칭찬에 커피 한 잔 얹기 <span class="muted">· 4,500원, 결제 즉시 쿠폰 발송</span></label></div>'
-     +'<div class="row"><button class="btn" id="send" style="flex:1"'+(S.picked===null||!S.rel||done?' disabled':'')+'>익명으로 칭찬 보내기</button><button class="btn ghost" id="skip">다른 질문</button></div>'
-     +'<p class="muted">누가 뽑았는지는 상대에게 보이지 않아요. 칭찬을 보내면 진주 10개를 받아요.</p>'
+     +'<div class="row"><button class="btn" id="send" style="flex:1"'+(S.picked===null||(!S.named&&!S.rel)||done?' disabled':'')+'>'+(S.named?'실명으로':'익명으로')+' 칭찬 보내기</button><button class="btn ghost" id="skip">다른 질문</button></div>'
+     +'<p class="muted">기본은 익명이고, 원하면 실명으로 보낼 수 있어요. 칭찬하기 미션을 달성하면 진주를 받아요.</p>'
      +'</section>'
      +'<section class="card"><span class="eyebrow">이렇게 쓰여요</span>'
-     +'<div class="list muted" style="gap:6px"><div>· 자유 글 없이 정해진 칭찬 질문에 동료 이름만 골라요.</div><div>· 회사에는 개인이 아닌 조직 단위 칭찬 통계만 전달돼요.</div><div>· 회사 이메일로 인증한 같은 회사 동료만 검색돼요. 동명이인은 팀으로 구분해요.</div></div></section>'
+     +'<div class="list muted" style="gap:6px"><div>· 자유 글 없이 정해진 칭찬 질문에 동료 이름만 골라요.</div><div>· 익명이 기본이에요. 직접 고마움을 전하고 싶을 때만 실명을 고르세요.</div><div>· 회사에는 개인이 아닌 조직 단위 칭찬 통계만 전달돼요.</div><div>· 회사 이메일로 인증한 같은 회사 동료만 검색돼요. 동명이인은 팀으로 구분해요.</div></div></section>'
      +'<section class="card"><span class="eyebrow">현장 감사</span><p style="margin:0">건물을 깨끗하고 안전하게 지켜주는 분께 QR로 감사를 전해요.</p><button class="btn ghost" data-tab-go="qr">현장 감사 QR 열기</button></section>';
   }
   function vInbox(){
@@ -606,8 +668,9 @@ button.chip{cursor:pointer}
      +'<div class="list">'+S.received.map(function(r,i){
         return '<article class="praise"><div class="q">“'+esc(praiseText(r.q))+'”</div><span class="muted">'+esc(r.when)+'</span>'
         +'<div class="meta">'+(r.isNew?'<span class="tag new">새 칭찬</span>':'')+(r.coupon?'<span class="tag pearl">커피 쿠폰 도착</span>':'')
-        +(r.hint?'<span class="tag new">힌트: '+esc(r.hint)+'</span>':'<button class="btn ghost small" data-reply="'+i+'">감사 답장 보내고 힌트 받기</button>')+'</div></article>'}).join("")+'</div>'
-     +'<p class="muted">감사 답장을 보내면 보낸 사람이 직접 고른 관계(선배·후배·동기·협업자)가 힌트로 열려요. 이름은 보낸 사람이 동의해야 공개돼요.</p></section>'
+        +(r.named?'<span class="tag new">실명 · '+esc(r.from)+' ('+esc(r.fromTeam)+')</span>'+(r.replied?'<span class="tag">답장 완료</span>':'<button class="btn ghost small" data-reply="'+i+'">감사 답장 보내기</button>')
+          :(r.hint?'<span class="tag new">힌트: '+esc(r.hint)+'</span>':'<button class="btn ghost small" data-reply="'+i+'">감사 답장 보내고 힌트 받기</button>'))+'</div></article>'}).join("")+'</div>'
+     +'<p class="muted">익명 칭찬은 감사 답장을 보내면 보낸 사람이 직접 고른 관계(선배·후배·동기·협업자)가 힌트로 열려요. 이름은 보낸 사람이 동의해야 공개돼요. 실명 칭찬은 보낸 사람 이름이 처음부터 보여요.</p></section>'
      ;
   }
   function vWhale(){
@@ -626,6 +689,12 @@ button.chip{cursor:pointer}
         return '<button class="item'+(own?' owned':'')+(on?' equipped':'')+(locked?' locked':'')+'" data-room="'+it.id+'"'+(locked?' aria-disabled="true"':'')+'>'+roomIcon(it.id)+'<span>'+it.n+'</span><span class="price">'+price+'</span></button>'}).join("")+'</div>'
      +'<p class="note">TV와 영화관은 같은 벽에 놓여서 하나만 배치돼요. 가구도 진주로만 사고, 현금으로 살 수 없어요.</p></section>';
   }
+  function msHomeCard(){msReset();var checked=S.att.last===today(),dDone=DAILY.filter(function(m){return msVal(m)>=m.goal}).length,n=msClaimable()-(checked?0:1);
+    return '<section class="card"><div class="row" style="justify-content:space-between"><h2 class="section-title">오늘의 미션</h2><span class="muted"><span class="num">'+dDone+' / '+DAILY.length+'</span> 달성</span></div>'
+     +'<div class="progress"><i style="width:'+(dDone/DAILY.length*100)+'%"></i></div>'
+     +'<div class="row" style="gap:8px">'+(checked?'<span class="tag">출석 <span class="num">'+S.att.streak+'</span>일째</span>':'<button class="btn small" id="checkIn">출석하고 진주 '+ATT[S.att.streak%7]+'개 받기</button>')
+     +'<button class="btn ghost small" data-gomission="1">'+(n?'받을 미션 보상 '+n+'개':'미션 보기')+'</button></div>'
+     +'<p class="note" style="margin:0">출석하고 칭찬을 주고받으면 미션이 채워지고, 달성하면 진주를 받아요.</p></section>'}
   function vWhaleOnly(){
     var lv=level(),c=condition(),next=LEVELS[lv+1];
     var days=["월","화","수","목","금","토","일"];var max=Math.max.apply(null,S.week.concat([4]));
@@ -637,10 +706,11 @@ button.chip{cursor:pointer}
      +'<button class="btn" id="openShare">'+esc(S.whaleName)+' 자랑하기</button></section>'
      +'<section class="card"><div class="row" style="justify-content:space-between"><span class="eyebrow">최근 7일 받은 칭찬</span><span class="muted">컨디션 '+c.n+'</span></div>'
      +'<div class="week">'+S.week.map(function(v,i){return '<div><i class="'+(i===6?'today':'')+'" style="height:'+Math.max(4,v/max*44)+'px"></i><span>'+days[i]+'</span></div>'}).join("")+'</div></section>'
+     +msHomeCard()
      +'<section class="card"><div class="row" style="justify-content:space-between"><h2 class="section-title">꾸미기 상점</h2><span class="chip"><span class="pearl-dot"></span><span class="num">'+S.pearls+'</span></span></div>'
      +'<div class="shop">'+ITEMS.map(function(it){var own=S.owned[it.id];var on=it.bg?S.bg===it.bg:S.equipped[it.id];
         return '<button class="item'+(own?' owned':'')+(on?' equipped':'')+'" data-item="'+it.id+'">'+itemIcon(it.id)+'<span>'+it.n+'</span><span class="price">'+(own?(on?'착용 중':'보유'):'<span class="pearl-dot"></span><span class="num">'+it.p+'</span>')+'</span></button>'}).join("")+'</div>'
-     +'<p class="note">수염은 한 번에 하나만 달 수 있어요. 진주는 칭찬을 주고받거나 친구를 초대하면 쌓이는 꾸미기 전용 재화예요. 현금 충전·환전·양도가 안 돼요.</p></section>';
+     +'<p class="note">수염은 한 번에 하나만 달 수 있어요. 진주는 출석·칭찬 미션을 달성하거나 친구를 초대하면 쌓이는 재화예요. 현금 충전·환전·양도가 안 돼요.</p></section>';
   }
   function vFriends(){
     var inside=COLLEAGUES.slice(0,5),outside=[["민지","다른 회사 · 이번 주 점프"],["준호","다른 회사 · 이번 주 살랑"],["소율","아직 미가입 · 초대함"]];
@@ -691,17 +761,39 @@ button.chip{cursor:pointer}
      +'<span class="muted">광고 적립 <span class="num">'+S.adToday+' / '+AD_CAP+'</span></span></div>'
      +'<div class="progress"><i style="width:'+(S.adToday/AD_CAP*100)+'%"></i></div>'
      +'<p class="muted" style="margin:0">미션으로 진주를 모아 고래·방을 꾸미거나 제휴 할인쿠폰을 받아요. 오늘 광고로 <span class="num">'+left+'</span>개 더 모을 수 있어요.</p></section>'
-     +'<div class="subtabs" role="tablist" aria-label="진주 메뉴">'+[["coupon","진주 쿠폰"],["earn","진주 모으기"]].map(function(x){return '<button role="tab" data-pmode="'+x[0]+'" aria-selected="'+(S.pMode===x[0])+'">'+x[1]+'</button>'}).join("")+'</div>'
-     +(S.pMode==="coupon"?pcCard()+'<button class="btn ghost" data-pmode="earn">진주가 더 필요하면 · 진주 모으기</button>':
+     +'<div class="subtabs s3" role="tablist" aria-label="진주 메뉴">'+[["coupon","진주 쿠폰"],["mission","미션"],["earn","진주 모으기"]].map(function(x){return '<button role="tab" data-pmode="'+x[0]+'" aria-selected="'+(S.pMode===x[0])+'">'+x[1]+'</button>'}).join("")+'</div>'
+     +(S.pMode==="coupon"?pcCard()+'<button class="btn ghost" data-pmode="mission">진주가 더 필요하면 · 미션 하러 가기</button>':S.pMode==="mission"?vMission():
      '<section class="card"><div class="row" style="justify-content:space-between"><h2 class="section-title">진주 모으기</h2><span class="tag">광고</span></div><div class="list">'
      +ADS.map(function(a){var s=SPONSORS[a.sp],done=S.adDone[a.id];
         return '<div class="admission"><div class="slogo" style="--c:'+s.c+'">'+esc(s.short)+'</div><div class="body"><b>'+esc(a.title)+'</b><span class="muted">'+esc(s.n)+' · '+esc(a.sub)+'</span></div>'
         +(done?'<span class="tag">완료</span>':'<button class="btn small" data-ad="'+a.id+'"'+(left<=0?' disabled':'')+'><span class="pearl-dot"></span> +'+a.reward+'</button>')+'</div>'}).join("")
-     +'<div class="admission"><div class="slogo" style="--c:var(--sea)">칭</div><div class="body"><b>동료 칭찬하기</b><span class="muted">칭찬 1회마다</span></div><button class="btn ghost small" data-tab="vote">+10</button></div>'
+     +'<div class="admission"><div class="slogo" style="--c:var(--sea)">미</div><div class="body"><b>출석·칭찬 미션</b><span class="muted">출석하고 칭찬을 주고받으면</span></div><button class="btn ghost small" data-pmode="mission">미션 보기</button></div>'
      +'<div class="admission"><div class="slogo" style="--c:#248A3D">친</div><div class="body"><b>친구 초대하기</b><span class="muted">친구가 가입하면 둘 다</span></div><button class="btn ghost small" data-tab="friends">+50</button></div></div>'
      +'<p class="note">광고 미션은 매일 새로 열려요. 진주는 꾸미기와 진주 쿠폰에만 쓰고, 현금이나 포인트로 바꿀 수 없어요.</p></section>'
      +'<section class="card"><span class="eyebrow">광고주 안내</span><p style="margin:0">칭찬받는 직장인에게 브랜드를 기분 좋게 알리세요. 영상·퀴즈·설문·브랜드 바다 미션을 운영할 수 있어요.</p>'
      +'<p class="muted" style="margin:0">광고주에게는 회사·연령대 단위 집계만 제공하고, 개인 정보는 전달하지 않아요.</p><button class="btn ghost" id="sponsorCta">진주 미션 광고 문의</button></section>');
+  }
+  function msRow(m){var sc=m.id.charAt(0),v=Math.min(m.goal,msVal(m)),got=(sc==="d"?S.ms.dGot:S.ms.wGot)[m.id],ok=v>=m.goal;
+    return '<div class="msn'+(got?' got':'')+'"><div class="body"><b>'+esc(m.n)+'</b><div class="mbar"><i style="width:'+(v/m.goal*100)+'%"></i></div><span class="muted"><span class="num">'+v+' / '+m.goal+'</span> · 진주 '+m.r+'개</span></div>'
+     +(got?'<span class="tag">받음</span>':ok?'<button class="btn small" data-ms="'+m.id+'"><span class="pearl-dot"></span> +'+m.r+' 받기</button>':(m.go?'<button class="btn ghost small" data-tab="'+m.go+'">하러 가기</button>':'<span class="muted">진행 중</span>'))+'</div>'}
+  function vMission(){
+    msReset();var checked=S.att.last===today(),pos=attPos();
+    var dDone=DAILY.filter(function(m){return msVal(m)>=m.goal}).length,allGot=DAILY.every(function(m){return S.ms.dGot[m.id]});
+    var dMax=DAILY.reduce(function(a,m){return a+m.r},0)+DAILY_ALL;
+    return '<section class="card"><div class="row" style="justify-content:space-between"><h2 class="section-title">연속 출석</h2><span class="muted"><span class="num">'+S.att.streak+'</span>일째</span></div>'
+     +'<div class="att">'+ATT.map(function(r,i){return '<div class="st'+(i<pos?' on':'')+(i===pos&&!checked?' next':'')+(i===6?' big':'')+'"><span>'+(i+1)+'일</span><span class="pearl-dot"></span><b class="num">'+r+'</b></div>'}).join("")+'</div>'
+     +(checked?'<button class="btn" disabled>오늘 출석 완료 · 내일 또 만나요</button>':'<button class="btn" id="checkIn">출석하고 진주 '+ATT[pos]+'개 받기</button>')
+     +'<p class="note" style="margin:0">7일 연속 출석하면 마지막 날 진주 30개를 받아요. 하루라도 빠지면 1일 차부터 다시 시작해요.</p></section>'
+     +'<section class="card"><div class="row" style="justify-content:space-between"><h2 class="section-title">오늘의 미션</h2><span class="muted"><span class="num">'+dDone+' / '+DAILY.length+'</span> 달성</span></div><div class="list">'
+     +DAILY.map(msRow).join("")
+     +'<div class="msn"><div class="body"><b>오늘의 미션 모두 받기</b><span class="muted">위 미션 보상을 모두 받으면 보너스</span></div>'
+     +(S.ms.dGot.all?'<span class="tag">받음</span>':allGot?'<button class="btn small" data-ms="d-all"><span class="pearl-dot"></span> +'+DAILY_ALL+' 받기</button>':'<span class="muted num">+'+DAILY_ALL+'</span>')+'</div></div>'
+     +'<p class="note">매일 0시에 새로 열려요. 오늘의 미션으로 받을 수 있는 진주는 최대 '+dMax+'개예요.</p></section>'
+     +'<section class="card"><div class="row" style="justify-content:space-between"><h2 class="section-title">이번 주 미션</h2><span class="tag">매주 새로 열림</span></div><div class="list">'
+     +WEEKLY.map(msRow).join("")+'</div>'
+     +'<p class="note">같은 동료에게만 몰아 보내지 않도록 서로 다른 동료를 칭찬하는 미션을 둬요.</p></section>'
+     +'<section class="card"><span class="eyebrow">진주는 이렇게 모여요</span><div class="list muted" style="gap:6px"><div>· 출석·칭찬하기·칭찬 받기 미션을 달성하면 받아요. 칭찬 한 번마다 바로 주지 않아요.</div><div>· 친구가 회사 이메일로 가입하면 둘 다 50개를 받아요.</div><div>· 광고 미션은 진주 모으기 탭에서 하루 100개까지 모아요.</div></div>'
+     +'<button class="btn ghost" data-pmode="earn">광고 미션으로 더 모으기</button></section>';
   }
   function pcCard(){
     pcReset();var wl=PC_WEEK-S.pcWeek;
@@ -810,6 +902,7 @@ button.chip{cursor:pointer}
      +'<p class="note">현재 회사는 내 개인 평판을 볼 수 없고, 조직 단위 통계만 받아요. 공유를 끊으면 링크가 바로 닫혀요.</p></section>'
      +'<section class="card"><div class="list">'
      +'<button class="menu-row" data-gorm="claim">내 쿠폰함<span>'+S.coupons.length+'장 ›</span></button>'
+     +'<button class="menu-row" data-gomission="1">출석 · 미션<span>'+(S.att&&S.att.last===today()?'출석 완료':'오늘 출석 전')+' ›</span></button>'
      +'<button class="menu-row" data-gorm="pearl">진주 · 진주 쿠폰<span>'+S.pearls+'개 ›</span></button>'
      +'<button class="menu-row" data-tab="friends">친구 초대<span>진주 +50 ›</span></button>'
      +'<button class="menu-row" id="myCert">회사 인증 관리<span>SK엠앤서비스 ›</span></button></div></section>';
@@ -876,7 +969,7 @@ button.chip{cursor:pointer}
     document.querySelectorAll(".tab").forEach(function(t){if(t.dataset.tab===S.tab)t.setAttribute("aria-current","page");else t.removeAttribute("aria-current")});
     $("#pearlCount").textContent=S.pearls;
     $("#inboxBadge").setAttribute("data-n",S.received.filter(function(r){return r.isNew}).length);
-    $("#rewardBadge").setAttribute("data-n",claimable());
+    $("#rewardBadge").setAttribute("data-n",claimable()+msClaimable());
     persist();
   }
   function go(tab){if(tab==="ads"){S.rMode="pearl";S.pMode="coupon";tab="rewards"}S.tab=tab;render();window.scrollTo({top:0})}
@@ -902,9 +995,9 @@ button.chip{cursor:pointer}
      +'<div class="celebrate"><div class="stage tropic lv'+lv+'" style="width:100%"><div class="waves"></div>'+whaleSVG()+'</div><div class="big">'+LEVELS[lv].n+' 단계로 올라갔어요</div><p class="muted" style="margin:0">받은 칭찬 <span class="num">'+S.receivedTotal+'</span>회. 이 순간을 자랑해 볼까요?</p>'
      +'<button class="btn" id="openShare2" style="width:100%">공유 카드 만들기</button></div>');
   }
-  function coffeeSheet(name,onDone){
+  function coffeeSheet(name,onDone,named){
     sheet('<div class="sheet-head"><h2 class="section-title">커피 쿠폰 결제</h2><button class="x" data-close aria-label="닫기">×</button></div>'
-     +'<div class="card" style="background:var(--surface-2)"><div class="row" style="justify-content:space-between"><b>아메리카노 T 모바일쿠폰</b><span class="num">4,500원</span></div><div class="muted">받는 사람: '+esc(name)+' · 보내는 사람은 익명</div></div>'
+     +'<div class="card" style="background:var(--surface-2)"><div class="row" style="justify-content:space-between"><b>아메리카노 T 모바일쿠폰</b><span class="num">4,500원</span></div><div class="muted">받는 사람: '+esc(name)+' · '+(named?'보내는 사람: '+esc(ME.n):'보내는 사람은 익명')+'</div></div>'
      +'<p class="note">충전 없이 결제 즉시 쿠폰이 발송돼요. 앱에 쌓이는 잔액은 없어요.</p>'
      +'<button class="btn" id="payNow">카드로 결제하고 보내기</button>');
     $("#payNow").onclick=function(){closeSheet();onDone()};
@@ -915,16 +1008,18 @@ button.chip{cursor:pointer}
 
   function sendVote(){
     var name=S.picked?S.picked.n:"동료";
-    var finish=function(){S.todayVotes=Math.min(S.dailyMax,S.todayVotes+1);S.pearls+=10;S.qIdx++;S.picked=null;var rl=S.rel;S.rel=null;
-      toast(name+" 님께 '너의 "+rl+"'로 익명 칭찬"+(S.coffee?"과 커피 쿠폰":"")+"을 보냈어요 · 진주 +10");S.coffee=false;render()};
-    if(S.coffee)coffeeSheet(name,finish);else finish();
+    var named=!!S.named;
+    var finish=function(){S.todayVotes=Math.min(S.dailyMax,S.todayVotes+1);S.qIdx++;S.picked=null;var rl=S.rel;S.rel=null;var ms=msBump("sent",name);if(named)rl=null;
+      toast(name+" 님께 "+(named?"실명":"'너의 "+rl+"'로 익명")+" 칭찬"+(S.coffee?"과 커피 쿠폰":"")+"을 보냈어요"+ms);S.coffee=false;render()};
+    if(S.coffee)coffeeSheet(name,finish,named);else finish();
   }
   function simulate(){
     var before=level();var q=QUESTIONS[(S.receivedTotal*5)%QUESTIONS.length];
-    S.received.unshift({q:q,hint:null,rel:RELS[S.receivedTotal%4],when:"방금",coupon:Math.random()<.3,isNew:true});
-    S.receivedTotal+=1;S.monthReceived+=1;S.week[6]+=1;S.pearls+=5;
+    var nm=S.receivedTotal%3===0,who=MEMBERS[(S.receivedTotal*7)%MEMBERS.length];
+    S.received.unshift({q:q,hint:null,rel:nm?null:RELS[S.receivedTotal%4],when:"방금",coupon:Math.random()<.3,isNew:true,named:nm,from:who[0],fromTeam:who[1]});
+    S.receivedTotal+=1;S.monthReceived+=1;S.week[6]+=1;var ms=msBump("recv");
     var opened=MILES.filter(function(m){return m.n===S.monthReceived})[0];
-    var after=level();render();toast(opened?"칭찬 "+opened.n+"회 보상이 열렸어요 · 보상 탭에서 받으세요":"새 칭찬이 도착했어요 · 진주 +5");
+    var after=level();render();toast(opened?"칭찬 "+opened.n+"회 보상이 열렸어요 · 보상 탭에서 받으세요":(nm?who[0]+" 님이 실명으로 칭찬했어요":"새 칭찬이 도착했어요")+ms);
     if(after>before)setTimeout(function(){levelUpSheet(after)},400);
   }
 
@@ -938,7 +1033,16 @@ button.chip{cursor:pointer}
     if(t.id==="acClear"){S.picked=null;S.rel=null;render();var i=$("#acInput");if(i)i.focus();return}
     if(t.id==="send"){sendVote();return}
     if(t.id==="skip"){S.qIdx++;render();return}
-    if(t.dataset.reply!==undefined){var r=S.received[+t.dataset.reply];r.hint=r.rel||"동료";r.isNew=false;S.pearls+=3;render();toast("감사 답장을 보냈어요 · 힌트: "+r.hint);return}
+    if(t.dataset.reply!==undefined){var r=S.received[+t.dataset.reply];r.isNew=false;var ms=msBump("reply");
+      if(r.named){r.replied=true;render();toast(r.from+" 님께 감사 답장을 보냈어요"+ms);return}
+      r.hint=r.rel||"동료";render();toast("감사 답장을 보냈어요 · 힌트: "+r.hint+ms);return}
+    if(t.dataset.named!==undefined){S.named=t.dataset.named==="1";render();return}
+    if(t.dataset.gomission!==undefined){S.rMode="pearl";S.pMode="mission";go("rewards");return}
+    if(t.id==="checkIn"){checkIn();return}
+    if(t.dataset.ms){msReset();var mid=t.dataset.ms;
+      if(mid==="d-all"){if(!S.ms.dGot.all&&DAILY.every(function(x){return S.ms.dGot[x.id]})){S.ms.dGot.all=true;S.pearls+=DAILY_ALL;render();toast("오늘의 미션 모두 달성 · 진주 +"+DAILY_ALL)}return}
+      var mm=DAILY.concat(WEEKLY).filter(function(x){return x.id===mid})[0],gotS=mid.charAt(0)==="d"?S.ms.dGot:S.ms.wGot;
+      if(!mm||gotS[mid]||msVal(mm)<mm.goal)return;gotS[mid]=true;S.pearls+=mm.r;render();toast("'"+mm.n+"' 달성 · 진주 +"+mm.r);return}
     
     if(t.id==="openShare"||t.id==="openShare2"){shareSheet();return}
     if(t.dataset.close!==undefined){clearInterval(adTimer);closeSheet();return}
@@ -954,7 +1058,7 @@ button.chip{cursor:pointer}
     if(t.dataset.wmode){S.whaleMode=t.dataset.wmode;render();return}
     if(t.dataset.room){var ri=ROOM.filter(function(x){return x.id===t.dataset.room})[0];
       if(ri.need&&level()<ri.need){toast(ri.n+"은(는) "+LEVELS[ri.need].n+" 단계부터 열려요. 칭찬을 받으면 단계가 올라요");return}
-      if(!S.roomOwned[ri.id]){if(S.pearls<ri.p){toast("진주가 "+(ri.p-S.pearls)+"개 부족해요. 칭찬을 보내면 진주가 쌓여요");return}S.pearls-=ri.p;S.roomOwned[ri.id]=true;S.room[ri.id]=false;toast(ri.n+"을(를) 샀어요")}
+      if(!S.roomOwned[ri.id]){if(S.pearls<ri.p){toast("진주가 "+(ri.p-S.pearls)+"개 부족해요. 미션을 달성하면 진주가 쌓여요");return}S.pearls-=ri.p;S.roomOwned[ri.id]=true;S.room[ri.id]=false;toast(ri.n+"을(를) 샀어요")}
       var on=!S.room[ri.id];if(on&&ri.slot)ROOM.forEach(function(x){if(x.slot===ri.slot)S.room[x.id]=false});S.room[ri.id]=on;
       render();return}
     if(t.dataset.visit){var name=t.dataset.visit;var preset=name==="민지"?{cinema:true,coral:true,lamp:true,weed:true}:{tv:true,sofa:true,frame:true};
@@ -962,9 +1066,9 @@ button.chip{cursor:pointer}
        +'<div class="stage room lv'+(name==="민지"?2:0)+'">'+roomSVG(preset,name==="민지"?2:0,true)+'</div>'
        +'<p class="muted">친구 방에서는 구경과 파도 응원만 할 수 있어요. 칭찬 투표는 같은 회사 동료끼리만 해요.</p>'
        +'<button class="btn" id="visitCheer" data-name="'+esc(name)+'">파도 응원 보내기</button>');return}
-    if(t.id==="visitCheer"){S.cheered[t.dataset.name]=true;closeSheet();render();toast(t.dataset.name+" 님께 파도 응원을 보냈어요");return}
+    if(t.id==="visitCheer"){S.cheered[t.dataset.name]=true;var ms=msBump("cheer");closeSheet();render();toast(t.dataset.name+" 님께 파도 응원을 보냈어요"+ms);return}
     if(t.dataset.item){var it=ITEMS.filter(function(x){return x.id===t.dataset.item})[0];
-      if(!S.owned[it.id]){if(S.pearls<it.p){toast("진주가 "+(it.p-S.pearls)+"개 부족해요. 칭찬을 보내면 진주가 쌓여요");return}S.pearls-=it.p;S.owned[it.id]=true;toast(it.n+"을(를) 샀어요")}
+      if(!S.owned[it.id]){if(S.pearls<it.p){toast("진주가 "+(it.p-S.pearls)+"개 부족해요. 미션을 달성하면 진주가 쌓여요");return}S.pearls-=it.p;S.owned[it.id]=true;toast(it.n+"을(를) 샀어요")}
       if(it.bg){S.bg=S.bg===it.bg?"tropic":it.bg}else{var on=!S.equipped[it.id];if(on&&it.group)ITEMS.forEach(function(x){if(x.group===it.group)S.equipped[x.id]=false});S.equipped[it.id]=on}
       render();return}
     if(t.dataset.mode){S.friendMode=t.dataset.mode;render();return}
@@ -1001,7 +1105,7 @@ button.chip{cursor:pointer}
     if(t.id==="toBenepia"){toast("베네피아 몰로 이동해요");return}
     if(t.id==="sponsorCta"){toast("스폰서 문의가 접수됐어요. 담당자가 연락드릴게요");return}
     if(t.id==="matchCta"){toast("회사 매칭 상담 요청이 접수됐어요");return}
-    if(t.dataset.cheer){S.cheered[t.dataset.cheer]=true;render();toast(t.dataset.cheer+" 님께 파도 응원을 보냈어요");return}
+    if(t.dataset.cheer){S.cheered[t.dataset.cheer]=true;var ms=msBump("cheer");render();toast(t.dataset.cheer+" 님께 파도 응원을 보냈어요"+ms);return}
     if(t.dataset.thx){S.qrTags[t.dataset.thx]=!S.qrTags[t.dataset.thx];render();return}
     if(t.id==="sendThx"){var fin=function(){S.qrSent++;S.qrTags={};toast("감사를 전했어요. 직원에게 알림이 갔어요");S.qrCoffee=false;render()};
       if(S.qrCoffee)coffeeSheet("OO타워 3층 미화 직원",fin);else fin();return}
@@ -1024,6 +1128,7 @@ button.chip{cursor:pointer}
 
   var h=(location.hash||"").slice(1);S.tab=["vote","inbox","whale","friends","qr","rewards","my"].indexOf(h)>=0?h:(h==="ads"?"rewards":"whale");
   if(h==="ads")S.rMode="pearl";if(S.rMode==="pcoupon")S.rMode="pearl";
+  if(h==="mission"){S.tab="rewards";S.rMode="pearl";S.pMode="mission"}
   render();
   // 동료 칭찬이 실제처럼 가끔 도착
   function incoming(){if(!document.hidden&&!document.querySelector("#scrim"))simulate()}
